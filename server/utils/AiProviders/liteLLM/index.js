@@ -11,13 +11,17 @@ class LiteLLM {
   constructor(embedder = null, modelPreference = null, config = null) {
     const { OpenAI: OpenAIApi } = require("openai");
     const https = require("https");
+    const http = require("http");
 
     this.className = "LiteLLM";
 
-    // Create HTTPS agent that accepts self-signed certificates
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // Allow self-signed certificates
-    });
+    // Helper to create appropriate agent for HTTP or HTTPS
+    const createAgent = (baseURL) => {
+      const isHttps = baseURL?.startsWith('https://');
+      return isHttps
+        ? new https.Agent({ rejectUnauthorized: false })
+        : new http.Agent();
+    };
 
     // PRIORITY 1: Provided config object (from llm_connections)
     if (config) {
@@ -36,7 +40,7 @@ class LiteLLM {
       this.openai = new OpenAIApi({
         baseURL: baseURL,
         apiKey: config.apiKey ?? null,
-        httpAgent: httpsAgent, // Use custom agent for HTTPS requests
+        httpAgent: createAgent(baseURL),
       });
       this.model = modelPreference ?? config.defaultModel ?? null;
       this.maxTokens = config.modelTokenLimit ?? 4096;
@@ -61,7 +65,7 @@ class LiteLLM {
       this.openai = new OpenAIApi({
         baseURL: baseURL,
         apiKey: process.env.LITE_LLM_API_KEY ?? null,
-        httpAgent: httpsAgent, // Use custom agent for HTTPS requests
+        httpAgent: createAgent(baseURL),
       });
       this.model = modelPreference ?? process.env.LITE_LLM_MODEL_PREF ?? null;
       this.maxTokens = process.env.LITE_LLM_MODEL_TOKEN_LIMIT ?? 1024;
